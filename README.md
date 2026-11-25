@@ -79,6 +79,9 @@ the `bt` result), prints CAGR / max drawdown / Sharpe / switch-count grids and s
 streamlit run app.py
 ```
 
+`app.py` is a router: a fixed header (logo + navigation) sits on every page, and each tool lives
+under `views/` at its own route. `/` currently forwards to **Leveraged Rotation Strategy** (`/lrs`).
+
 Sidebar: risk-on ETF, risk-off asset, SMA length, buffer %, data mode, costs, date range.
 **Backtest** tab: equity curve vs benchmarks with the SMA overlaid on the buy-and-hold
 underlying line, green shading while holding the ETF, and trade markers (green ▲ buy, red ▼ sell) (log scale by default — equal heights =
