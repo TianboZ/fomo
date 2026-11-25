@@ -1,7 +1,7 @@
 [project]
 name = "fomo"
 version = "0.1.0"
-description = "Backtest a 200-day SMA trend filter on leveraged ETFs (TQQQ / UPRO)"
+description = "Backtest a 200-day SMA trend filter on leveraged ETFs (TQQQ / UPRO / QLD / SSO)"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [

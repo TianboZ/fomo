@@ -71,3 +71,13 @@ def test_buffer_one_percent_band():
 def test_invalid_params(kwargs):
     with pytest.raises(ValueError):
         raw_trend_state(_series(range(1, 20)), **{"sma_length": 5, **kwargs})
+
+
+def test_asymmetric_buffers():
+    prices = _series([100, 110, 140, 120, 100, 80])
+    # Buy at the SMA, sell only 10% below it: rides through the t3/t4 dip.
+    loose_exit = raw_trend_state(prices, sma_length=2, buffer=0.0, lower_buffer=0.10)
+    assert loose_exit.tolist() == [False, True, True, True, True, False]
+    # Buy only 10% above the SMA, sell as soon as it crosses below.
+    strict_entry = raw_trend_state(prices, sma_length=2, buffer=0.10, lower_buffer=0.0)
+    assert strict_entry.tolist() == [False, False, True, False, False, False]

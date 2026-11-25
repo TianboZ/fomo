@@ -1,4 +1,4 @@
-"""Fast vectorized parameter sweep over SMA length and buffer.
+"""Fast vectorized parameter sweep over SMA length and buffer bands.
 
 Uses the same signal and cost model as the bt backtest (trade at the close on the
 day after the signal, cost charged on the traded notional), but in plain pandas so
@@ -43,23 +43,39 @@ def parameter_sweep(
     risk_off: pd.Series,
     sma_lengths=range(100, 251, 25),
     buffers=(0.0, 0.005, 0.01, 0.015, 0.02, 0.03, 0.04, 0.05),
+    lower_buffers=None,
     cost_bps: float = 5.0,
+    base: float = 100_000.0,
     start: str | None = None,
     end: str | None = None,
 ) -> pd.DataFrame:
-    """One row per (sma_length, buffer) with CAGR, max drawdown, Sharpe, switches."""
+    """One row per parameter combination with CAGR, max drawdown, Sharpe, switches.
+
+    ``buffers`` are upper (buy) bands. With ``lower_buffers=None`` the band is
+    symmetric (lower = upper); otherwise every upper x lower pair is tested.
+    """
     idx = risk_on.loc[start:end].index.intersection(risk_off.dropna().index)
     on, off = risk_on.reindex(idx), risk_off.reindex(idx)
     rows = []
     for n in sma_lengths:
-        for b in buffers:
-            sig = trend_signal(underlying, int(n), float(b)).reindex(idx).fillna(False).astype(bool)
-            eq = strategy_equity(sig, on, off, cost_bps)
+        pairs = (
+            [(b, b) for b in buffers]
+            if lower_buffers is None
+            else [(u, lo) for u in buffers for lo in lower_buffers]
+        )
+        for b, lb in pairs:
+            sig = (
+                trend_signal(underlying, int(n), float(b), float(lb))
+                .reindex(idx).fillna(False).astype(bool)
+            )
+            eq = strategy_equity(sig, on, off, cost_bps, base)
             s = equity_stats(eq)
             rows.append(
                 {
                     "sma_length": int(n),
-                    "buffer": float(b),
+                    "upper_buffer": float(b),
+                    "lower_buffer": float(lb),
+                    "Final value": eq.iloc[-1],
                     "CAGR": s["CAGR"],
                     "Max drawdown": s["Max drawdown"],
                     "Sharpe (rf=0)": s["Sharpe (rf=0)"],
@@ -71,8 +87,8 @@ def parameter_sweep(
     return pd.DataFrame(rows)
 
 
-def pivot(sweep: pd.DataFrame, metric: str) -> pd.DataFrame:
-    """SMA length (rows) x buffer (columns) grid of ``metric``."""
-    return sweep.pivot(index="sma_length", columns="buffer", values=metric)
+def pivot(sweep: pd.DataFrame, metric: str, rows: str = "sma_length", cols: str = "upper_buffer") -> pd.DataFrame:
+    """2-D grid of ``metric``: SMA length x buffer, or e.g. lower_buffer x upper_buffer."""
+    return sweep.pivot_table(index=rows, columns=cols, values=metric, aggfunc="first")
 
 

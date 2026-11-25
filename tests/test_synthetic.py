@@ -69,3 +69,16 @@ def test_strategy_equity_switching_and_costs():
     eq_cost = strategy_equity(sig, on, off, cost_bps=10.0)
     c = 10 / 1e4
     assert_allclose(eq_cost.to_numpy(), np.array([1, 1.1, 1.21 * (1 - 2 * c), 1.21 * (1 - 2 * c)]) * 100 * (1 - c))
+
+
+def test_sweep_symmetric_and_asymmetric_grids():
+    from fomo.sweep import parameter_sweep
+
+    idx = pd.bdate_range("2020-01-01", periods=120)
+    under = pd.Series(100 * np.exp(np.cumsum(np.sin(np.arange(120) / 7) * 0.02)), index=idx)
+    off = pd.Series(100.0, index=idx)
+    sym = parameter_sweep(under, under, off, sma_lengths=[10, 20], buffers=[0.0, 0.02])
+    assert len(sym) == 4 and (sym.upper_buffer == sym.lower_buffer).all()
+    asym = parameter_sweep(under, under, off, sma_lengths=[10], buffers=[0.0, 0.02], lower_buffers=[0.0, 0.01, 0.03])
+    assert len(asym) == 6
+    assert set(zip(asym.upper_buffer, asym.lower_buffer)) == {(u, lo) for u in (0.0, 0.02) for lo in (0.0, 0.01, 0.03)}

@@ -26,6 +26,7 @@ def equity_stats(eq: pd.Series) -> dict:
     return {
         "Start": eq.index[0].date(),
         "End": eq.index[-1].date(),
+        "Final value": eq.iloc[-1],
         "Total return": eq.iloc[-1] / eq.iloc[0] - 1,
         "CAGR": cagr,
         "Volatility (ann.)": vol,
@@ -49,6 +50,8 @@ def format_stats(stats: pd.DataFrame) -> pd.DataFrame:
             v = stats.loc[row, col]
             if v is None or (isinstance(v, (float, np.floating)) and np.isnan(v)):
                 out.loc[row, col] = ""
+            elif row == "Final value":
+                out.loc[row, col] = f"${v:,.0f}"
             elif row in PERCENT_ROWS:
                 out.loc[row, col] = f"{v:.1%}"
             elif isinstance(v, (float, np.floating)):
