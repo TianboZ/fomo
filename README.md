@@ -1,8 +1,13 @@
-# fomo — leveraged ETF trend-filter backtest
+# 你太fomo了 (fomo) — a toolbox of strategy backtests
 
-Backtests a simple rotation: **hold a leveraged ETF — 3x TQQQ / UPRO or 2x QLD / SSO — while its underlying index
-(QQQ / SPY) is above its 200-day SMA, otherwise hold cash or bonds** — with an optional
-buffer band, a parameter sweep, a quantstats tearsheet and a Streamlit dashboard.
+**fomo** is a growing collection of backtesting tools in one Streamlit app. Each tool gets
+its own page and URL, and a shared header lets you jump between them. The aim is to test a
+strategy before FOMO makes you trade it.
+
+| Tool | Route | What it tests |
+| --- | --- | --- |
+| **Leveraged Rotation Strategy** | `/lrs` | Hold 3x/2x leveraged ETFs (TQQQ, UPRO, QLD, SSO) while the underlying is above its 200-day SMA, else cash/bonds |
+| *More coming soon* | | |
 
 Stack: Python 3.11+, [`bt`](https://pmorissette.github.io/bt/) (backtest engine),
 `yfinance` (data), `quantstats` (tearsheet), `streamlit` + `plotly` (dashboard), `pytest`.
@@ -21,7 +26,45 @@ source .venv/bin/activate
 Prices are downloaded from Yahoo Finance and cached as CSV in `data/` (refreshed after
 ~20h, or with `--refresh`). Reports go to `reports/`. Both are git-ignored.
 
-## Strategy rules
+## Run the app
+
+```bash
+streamlit run app.py      # then open http://localhost:8501
+```
+
+`/` currently forwards to the first tool, `/lrs`.
+
+### Project layout
+
+```
+app.py              # entrypoint + router (st.navigation); registers every tool page
+views/header.py     # fixed top header: logo, nav links (active page highlighted)
+views/lrs.py        # Leveraged Rotation Strategy page
+src/fomo/           # backtest engine, data loading, metrics, sweep, reports
+tests/              # offline unit tests
+```
+
+### Adding a tool
+
+1. Create `views/<tool>.py` with the page's Streamlit code. Don't call `st.set_page_config`;
+   `app.py` does that once.
+2. In `app.py`, register it with `st.Page(ROOT / "views" / "<tool>.py", title="...", url_path="<route>")`
+   and add it to `NAV_PAGES`. It then appears in the header automatically.
+
+## Leveraged Rotation Strategy (`/lrs`)
+
+Backtests a simple rotation: **hold a leveraged ETF — 3x TQQQ / UPRO or 2x QLD / SSO — while its underlying index
+(QQQ / SPY) is above its 200-day SMA, otherwise hold cash or bonds** — with an optional
+buffer band, a parameter sweep, a quantstats tearsheet, a dashboard page and a CLI.
+
+**Dashboard.** Sidebar: risk-on ETF, risk-off asset, SMA length, buffer %, data mode, costs, date range.
+**Backtest** tab: equity curve vs benchmarks with the SMA overlaid on the buy-and-hold
+underlying line, green shading while holding the ETF, and trade markers (green ▲ buy, red ▼ sell) (log scale by default — equal heights =
+equal % change — with a toggle for linear $), drawdowns, underlying vs SMA (with trade
+markers and in-market shading), stats table, synthetic validation, downloadable quantstats
+tearsheet. **Optimize** tab: SMA × buffer or upper × lower buffer heatmap for any metric plus the full table.
+
+### Strategy rules
 
 * **Signal** on the underlying (QQQ for TQQQ, SPY for UPRO) using total-return closes.
 * **Buffer band `b`** (hysteresis): buy only when close > SMA × (1 + b), sell only when
@@ -55,7 +98,7 @@ window uses only real ETF prices for all four funds. The CLI prints a synthetic-
 overlap (≈0.999 daily correlation for TQQQ; synthetic runs ~1.5%/yr optimistic because real
 funds pay swap spreads above T-bills).
 
-## CLI
+### CLI
 
 ```bash
 fomo-backtest                                     # TQQQ / cash, 200 SMA, last 10 years, HTML tearsheet
@@ -73,22 +116,6 @@ fomo-backtest --sweep --sma 200 --buffers 0 0.01 0.02 --lower-buffers 0 0.01 0.0
 lower buffer at a fixed `--sma`) with a fast vectorized engine (verified to match
 the `bt` result), prints CAGR / max drawdown / Sharpe / switch-count grids and saves a CSV.
 
-## Dashboard
-
-```bash
-streamlit run app.py
-```
-
-`app.py` is a router: a fixed header (logo + navigation) sits on every page, and each tool lives
-under `views/` at its own route. `/` currently forwards to **Leveraged Rotation Strategy** (`/lrs`).
-
-Sidebar: risk-on ETF, risk-off asset, SMA length, buffer %, data mode, costs, date range.
-**Backtest** tab: equity curve vs benchmarks with the SMA overlaid on the buy-and-hold
-underlying line, green shading while holding the ETF, and trade markers (green ▲ buy, red ▼ sell) (log scale by default — equal heights =
-equal % change — with a toggle for linear $), drawdowns, underlying vs SMA (with trade
-markers and in-market shading), stats table, synthetic validation, downloadable quantstats
-tearsheet. **Optimize** tab: SMA × buffer or upper × lower buffer heatmap for any metric plus the full table.
-
 ## Tests
 
 ```bash
@@ -98,7 +125,7 @@ pytest
 Offline unit tests cover no-look-ahead signal timing, buffer hysteresis, synthetic leverage
 math (3x returns minus costs, volatility decay), splicing, and the sweep engine's cost model.
 
-## Caveats
+## Caveats (Leveraged Rotation Strategy)
 
 * **Overfitting:** with ~25 years of data there are only a handful of bear markets, and the
   sweep grid is noisy (neighbouring cells can differ by several % CAGR). Don't pick the best
