@@ -17,6 +17,7 @@ from fomo.strategies import LEVERAGE, DATA_MODES, RISK_OFF_CHOICES, UNDERLYING, 
 
 
 PROXY_FILL = "rgba(128,128,128,0.18)"
+HOVER_DATE = "%Y/%m/%d"
 
 
 def nice_log_ticks(lo: float, hi: float) -> list[float]:
@@ -243,7 +244,7 @@ with tab_bt:
         fig.update_layout(yaxis2=dict(overlaying="y", range=[0, 1], visible=False))
     fig.update_layout(
         title=f"Growth of ${initial_capital:,.0f} ({'log' if log_y else 'linear'} scale)", height=480,
-        legend=dict(orientation="h", y=-0.15), hovermode="x unified",
+        legend=dict(orientation="h", y=-0.15), hovermode="x unified", xaxis_hoverformat=HOVER_DATE,
     )
     if log_y:
         ticks = nice_log_ticks(float(eq.min().min()), float(eq.max().max()))
@@ -261,7 +262,7 @@ with tab_bt:
         fig_dd.add_trace(go.Scatter(x=dd.index, y=dd[col], name=col, line=dict(color=series_color(col, result)),
                                     fill="tozeroy" if col == result.strategy_name else None))
     fig_dd.update_layout(title="Drawdown", yaxis_tickformat=".0%", height=320,
-                         legend=dict(orientation="h", y=-0.2), hovermode="x unified")
+                         legend=dict(orientation="h", y=-0.2), hovermode="x unified", xaxis_hoverformat=HOVER_DATE)
     shade_proxies(fig_dd, result.proxy_periods, annotate=False)
     st.plotly_chart(fig_dd, width="stretch")
 
@@ -277,7 +278,7 @@ with tab_bt:
     fig_sig.update_layout(
         title=f"{cfg.underlying} vs SMA (green shading = holding {risk_on}; ▲ buy, ▼ sell)", yaxis_type="log" if log_y else "linear",
         height=420,
-        yaxis2=dict(overlaying="y", range=[0, 1], visible=False), hovermode="x unified",
+        yaxis2=dict(overlaying="y", range=[0, 1], visible=False), hovermode="x unified", xaxis_hoverformat=HOVER_DATE,
         legend=dict(orientation="h", y=-0.15),
     )
     shade_proxies(fig_sig, result.proxy_periods, annotate=False)
