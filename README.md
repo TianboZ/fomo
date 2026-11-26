@@ -77,7 +77,8 @@ tearsheet. **Optimize** tab: SMA × buffer or upper × lower buffer heatmap for 
 * **Risk-off:** `CASH` (13-week T-bills, `^IRX`), `SHY` or `TLT` (T-bills before their 2002 inception).
 * **Costs:** `--cost-bps` per trade (default 5 bps on traded notional; a switch costs 2×).
 * **Period:** the last 10 years by default (`--years N`, `--years 0` for full history, or
-  `--start/--end`; dashboard "Period" preset, also settable via URL, e.g. `?period=Full%20history`).
+  `--start/--end`; dashboard "Period" preset — YTD, last 5/10/20 years, full history or custom —
+  also settable via URL, e.g. `?period=YTD` or `?period=Full%20history`).
 * **Initial amount:** $100,000 by default (`--initial-capital`, or the sidebar input);
   equity curves and the "Final value" stat are in dollars.
 * Benchmarks: buy-and-hold underlying, SPY, and the leveraged ETF.

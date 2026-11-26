@@ -153,14 +153,19 @@ except Exception as exc:  # network / yfinance failures
     st.stop()
 
 min_d, max_d = data.prices.index[0].date(), data.prices.index[-1].date()
-PERIODS = {"Last 5 years": 5, "Last 10 years": 10, "Last 20 years": 20, "Full history": None, "Custom": "custom"}
+PERIODS = {"YTD": "ytd", "Last 5 years": 5, "Last 10 years": 10, "Last 20 years": 20, "Full history": None,
+           "Custom": "custom"}
 period = sb.selectbox(
     "Period", list(PERIODS),
-    index=list(PERIODS).index(st.query_params.get("period", "Last 10 years"))
-    if st.query_params.get("period") in PERIODS else 1,
+    index=list(PERIODS).index(st.query_params.get("period", "Last 10 years")
+                              if st.query_params.get("period") in PERIODS else "Last 10 years"),
     help="Earlier dates use synthetic prices where an ETF didn't exist yet (shown as a gray band).",
 )
-if PERIODS[period] == "custom":
+if PERIODS[period] == "ytd":
+    # Start from the prior year's last close so the first trading day's return counts.
+    before = data.prices.index[data.prices.index < pd.Timestamp(max_d.year, 1, 1)]
+    start, end = (before[-1].date() if len(before) else min_d), max_d
+elif PERIODS[period] == "custom":
     default_start = max(min_d, (pd.Timestamp(max_d) - pd.DateOffset(years=10)).date())
     dates = sb.date_input("Date range", (default_start, max_d), min_value=min_d, max_value=max_d)
     start, end = (dates if isinstance(dates, (tuple, list)) and len(dates) == 2 else (default_start, max_d))
