@@ -15,6 +15,7 @@ from views.header import render_header
 st.set_page_config(page_title="你太fomo了", layout="wide")
 
 lrs = st.Page(ROOT / "views" / "lrs.py", title="Leveraged Rotation Strategy", url_path="lrs")
+risk = st.Page(ROOT / "views" / "risk.py", title="Market Risk", url_path="risk")
 
 
 def home_redirect() -> None:
@@ -23,7 +24,7 @@ def home_redirect() -> None:
 
 
 home = st.Page(home_redirect, title="Home", default=True)
-NAV_PAGES = [lrs]
+NAV_PAGES = [lrs, risk]
 
 current = st.navigation([home, *NAV_PAGES], position="hidden")
 render_header(home, NAV_PAGES, current)

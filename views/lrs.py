@@ -81,6 +81,13 @@ def cached_data(risk_on, risk_off, data_mode, expense_ratio):
     return load_market_data(risk_on, risk_off, data_mode, LEVERAGE[risk_on], expense_ratio)
 
 
+@st.cache_data(ttl=6 * 3600, show_spinner="Loading VIX...")
+def cached_vix():
+    from fomo.data import get_price
+
+    return get_price("^VIX")
+
+
 @st.cache_data(show_spinner="Running backtest...")
 def cached_backtest(cfg_dict: dict):
     cfg = TrendConfig(**cfg_dict)
@@ -255,6 +262,31 @@ with tab_bt:
     add_trade_markers(fig, result.in_market, eq[result.strategy_name], risk_on, risk_off)
     shade_proxies(fig, result.proxy_periods)
     st.plotly_chart(fig, width="stretch")
+
+    try:
+        vix = cached_vix().reindex(eq.index).ffill()
+    except Exception as exc:  # network / yfinance failures shouldn't break the page
+        st.caption(f"VIX unavailable: {exc}")
+    else:
+        fig_vix = go.Figure()
+        fig_vix.add_trace(go.Scatter(
+            x=result.in_market.index, y=result.in_market.astype(int), name=f"Holding {risk_on}",
+            yaxis="y2", fill="tozeroy", line=dict(width=0, shape="hv"),
+            fillcolor="rgba(46,160,67,0.15)", hoverinfo="skip", showlegend=False,
+        ))
+        fig_vix.add_trace(go.Scatter(x=vix.index, y=vix, name="VIX", line=dict(color="#a371f7", width=1.5),
+                                     hovertemplate="%{y:.2f}"))
+        for level, label in ((20, "20 elevated"), (30, "30 high fear")):
+            fig_vix.add_hline(y=level, line=dict(color="gray", dash="dot", width=1),
+                              annotation_text=label, annotation_position="top left", annotation_font_size=10)
+        add_trade_markers(fig_vix, result.in_market, vix, risk_on, risk_off, fmt="VIX %{y:.2f}")
+        fig_vix.update_layout(
+            title="VIX (CBOE volatility index)", height=280, showlegend=False,
+            yaxis2=dict(overlaying="y", range=[0, 1], visible=False),
+            hovermode="x unified", xaxis_hoverformat=HOVER_DATE, margin=dict(t=50, b=30),
+        )
+        shade_proxies(fig_vix, result.proxy_periods, annotate=False)
+        st.plotly_chart(fig_vix, width="stretch")
 
     dd = drawdown(result.equity)
     fig_dd = go.Figure()

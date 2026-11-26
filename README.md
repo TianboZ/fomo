@@ -7,6 +7,7 @@ strategy before FOMO makes you trade it.
 | Tool | Route | What it tests |
 | --- | --- | --- |
 | **Leveraged Rotation Strategy** | `/lrs` | Hold 3x/2x leveraged ETFs (TQQQ, UPRO, QLD, SSO) while the underlying is above its 200-day SMA, else cash/bonds |
+| **Market Risk** | `/risk` | VIX (equity vol), MOVE (Treasury vol) and CNN Fear & Greed with risk zones, YTD/1Y/5Y/10Y/Max |
 | *More coming soon* | | |
 
 Stack: Python 3.11+, [`bt`](https://pmorissette.github.io/bt/) (backtest engine),
@@ -40,6 +41,7 @@ streamlit run app.py      # then open http://localhost:8501
 app.py              # entrypoint + router (st.navigation); registers every tool page
 views/header.py     # fixed top header: logo, nav links (active page highlighted)
 views/lrs.py        # Leveraged Rotation Strategy page
+views/risk.py       # Market Risk page
 src/fomo/           # backtest engine, data loading, metrics, sweep, reports
 tests/              # offline unit tests
 ```
@@ -51,6 +53,23 @@ tests/              # offline unit tests
 2. In `app.py`, register it with `st.Page(ROOT / "views" / "<tool>.py", title="...", url_path="<route>")`
    and add it to `NAV_PAGES`. It then appears in the header automatically.
 
+## Market Risk (`/risk`)
+
+Latest reading (with daily change) and a history chart for three risk gauges, each shaded by zone. The
+charts share one date axis: hovering any of them shows all three values for that day, and zooming one
+zooms all.
+
+* **VIX** (`^VIX`, Yahoo) — S&P 500 30-day implied volatility. < 20 calm, 20–30 elevated, > 30 high fear.
+* **MOVE** (`^MOVE`, Yahoo, from 2002) — 1-month Treasury implied volatility. < 120 normal, 120–150 stress, > 150 crisis.
+* **CNN Fear & Greed** (0–100, from 2021) — CNN's bands: < 25 extreme fear, 25–45 fear, 45–55 neutral,
+  55–75 greed, > 75 extreme greed. Pulled from CNN's unofficial chart-data endpoint
+  (`production.dataviz.cnn.io/index/fearandgreed/graphdata/<start>`); it isn't a supported API, can change or
+  block requests without notice, and CNN doesn't license the data for redistribution.
+
+Period: YTD, 1Y (default), 5Y, 10Y or Max, also via URL (`/risk?period=5Y`). All series are cached in
+`data/` like prices; if a download fails the last cached copy is used, and if there is none the page
+shows a warning for that gauge and still renders the others.
+
 ## Leveraged Rotation Strategy (`/lrs`)
 
 Backtests a simple rotation: **hold a leveraged ETF — 3x TQQQ / UPRO or 2x QLD / SSO — while its underlying index
@@ -60,7 +79,8 @@ buffer band, a parameter sweep, a quantstats tearsheet, a dashboard page and a C
 **Dashboard.** Sidebar: risk-on ETF, risk-off asset, SMA length, buffer %, data mode, costs, date range.
 **Backtest** tab: equity curve vs benchmarks with the SMA overlaid on the buy-and-hold
 underlying line, green shading while holding the ETF, and trade markers (green ▲ buy, red ▼ sell) (log scale by default — equal heights =
-equal % change — with a toggle for linear $), drawdowns, underlying vs SMA (with trade
+equal % change — with a toggle for linear $), a VIX chart (`^VIX`, with 20/30 reference lines and the same
+shading and trade markers), drawdowns, underlying vs SMA (with trade
 markers and in-market shading), stats table, synthetic validation, downloadable quantstats
 tearsheet. **Optimize** tab: SMA × buffer or upper × lower buffer heatmap for any metric plus the full table.
 
